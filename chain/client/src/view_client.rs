@@ -29,8 +29,8 @@ use near_primitives::merkle::{merklize, PartialMerkleTree};
 use near_primitives::network::AnnounceAccount;
 use near_primitives::sharding::ShardChunk;
 use near_primitives::syncing::{
-    LightSpeedSyncResponse, ShardStateSyncResponse, ShardStateSyncResponseHeader,
-    ShardStateSyncResponseV1, ShardStateSyncResponseV2,
+    EpochSyncFinalizationResponse, EpochSyncResponse, ShardStateSyncResponse,
+    ShardStateSyncResponseHeader, ShardStateSyncResponseV1, ShardStateSyncResponseV2,
 };
 use near_primitives::types::{
     AccountId, BlockHeight, BlockId, BlockReference, Finality, MaybeBlockId, ShardId,
@@ -1118,27 +1118,105 @@ impl Handler<NetworkViewClientMessages> for ViewClientActor {
 
                 NetworkViewClientResponses::AnnounceAccount(filtered_announce_accounts)
             }
-            NetworkViewClientMessages::LightSpeedSyncRequest { epoch_id } => {
+            NetworkViewClientMessages::EpochSyncRequest { epoch_id } => {
                 match self.chain.mut_store().get_epoch_light_client_block(&epoch_id.0) {
                     Ok(light_client_block_view) => {
-                        NetworkViewClientResponses::LightSpeedSyncResponse(
-                            LightSpeedSyncResponse::Advance {
-                                light_client_block_view: light_client_block_view.clone(),
-                            },
-                        )
+                        NetworkViewClientResponses::EpochSyncResponse(EpochSyncResponse::Advance {
+                            light_client_block_view: light_client_block_view.clone(),
+                        })
                     }
                     Err(e) => match e.kind() {
                         ErrorKind::DBNotFoundErr(_) => {
-                            NetworkViewClientResponses::LightSpeedSyncResponse(
-                                LightSpeedSyncResponse::UpToDate,
+                            NetworkViewClientResponses::EpochSyncResponse(
+                                EpochSyncResponse::UpToDate,
                             )
                         }
                         _ => {
-                            warn!(target: "client", "Getting light speed sync response failed: {}", e.to_string());
+                            warn!(target: "client", "Getting Epoch Sync response failed: {}", e.to_string());
                             NetworkViewClientResponses::NoResponse
                         }
                     },
                 }
+            }
+            NetworkViewClientMessages::EpochSyncFinalizationRequest { epoch_id } => {
+                let height = match self.chain.runtime_adapter.get_epoch_start_height(&epoch_id.0) {
+                    Ok(height) => height,
+                    Err(e) => {
+                        // Inner error or malicious request
+                        warn!(target: "client", "Invalid Epoch in EpochSyncFinalizationRequest: {}", e.to_string());
+                        return NetworkViewClientResponses::NoResponse;
+                    }
+                };
+                let mut header = match self.chain.mut_store().get_header_by_height(height) {
+                    Ok(header) => header.clone(),
+                    Err(e) => {
+                        // Inner error or malicious request
+                        info!(target: "client", "Cannot get header by height {} in EpochSyncFinalizationRequest: {}", height, e.to_string());
+                        return NetworkViewClientResponses::NoResponse;
+                    }
+                };
+                let mut prev_header = match self
+                    .chain
+                    .mut_store()
+                    .get_block_header(header.prev_hash())
+                {
+                    Ok(header) => header.clone(),
+                    Err(e) => {
+                        // Inner error or malicious request
+                        info!(target: "client", "Cannot get header by height {} in EpochSyncFinalizationRequest: {}", height, e.to_string());
+                        return NetworkViewClientResponses::NoResponse;
+                    }
+                };
+
+                // KRYA it might be better to use head_block_hash of the next epoch?
+                // KRYA another way to do that - is to prove the oldest header and then prove all its descendants
+                let block_merkle_proof = match self
+                    .chain
+                    .get_block_proof(header.hash(), header.hash())
+                {
+                    Ok(proof) => proof,
+                    Err(e) => {
+                        // Inner error: Block Proof should exist at this point.
+                        error!(target: "client", "Cannot get block proof for hash {} in EpochSyncFinalizationRequest: {}", header.hash(), e.to_string());
+                        return NetworkViewClientResponses::NoResponse;
+                    }
+                };
+
+                let mut headers = vec![header];
+                let mut chunk_mask = vec![0; prev_header.chunk_mask().len()];
+                loop {
+                    let mut found = true;
+                    for x in chunk_mask.iter() {
+                        // KRYA *x < 2
+                        if *x < 1 {
+                            found = false;
+                            break;
+                        }
+                    }
+                    if found {
+                        // We know about at least one Chunk in each Shard
+                        break;
+                    }
+                    header = prev_header;
+                    prev_header = match self.chain.mut_store().get_block_header(header.prev_hash())
+                    {
+                        Ok(header) => header.clone(),
+                        Err(e) => {
+                            // Inner error or malicious request
+                            info!(target: "client", "Cannot get header by height {} in EpochSyncFinalizationRequest: {}", height, e.to_string());
+                            return NetworkViewClientResponses::NoResponse;
+                        }
+                    };
+                    headers.push(header);
+                    for i in 0..chunk_mask.len() {
+                        chunk_mask[i] += prev_header.chunk_mask()[i] as i32; // Rust guarantees that bool is 0 or 1
+                    }
+                }
+                headers.push(prev_header);
+
+                NetworkViewClientResponses::EpochSyncFinalizationResponse(
+                    EpochSyncFinalizationResponse { headers, block_merkle_proof },
+                )
             }
         }
     }

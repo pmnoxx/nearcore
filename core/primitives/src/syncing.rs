@@ -1,6 +1,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::Serialize;
 
+use crate::block_header::BlockHeader;
 use crate::hash::CryptoHash;
 use crate::merkle::MerklePath;
 use crate::receipt::Receipt;
@@ -190,7 +191,13 @@ impl ShardStateSyncResponseV1 {
 }
 
 #[derive(Serialize, BorshSerialize, BorshDeserialize, Eq, PartialEq, Debug, Clone)]
-pub enum LightSpeedSyncResponse {
+pub struct EpochSyncFinalizationResponse {
+    pub headers: Vec<BlockHeader>,
+    pub block_merkle_proof: MerklePath,
+}
+
+#[derive(Serialize, BorshSerialize, BorshDeserialize, Eq, PartialEq, Debug, Clone)]
+pub enum EpochSyncResponse {
     UpToDate,
     Advance { light_client_block_view: LightClientBlockView },
 }

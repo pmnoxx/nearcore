@@ -206,7 +206,7 @@ fn display_sync_status(
     match sync_status {
         SyncStatus::AwaitingPeers => format!("#{:>8} Waiting for peers", head.height),
         SyncStatus::NoSync => format!("#{:>8} {:>44}", head.height, head.last_block_hash),
-        SyncStatus::LightSpeedSync { epoch_ord } => {
+        SyncStatus::EpochSync { epoch_ord } => {
             format!("[EPOCH: {:>5}] Getting to a recent epoch", epoch_ord)
         }
         SyncStatus::HeaderSync { current_height, highest_height } => {

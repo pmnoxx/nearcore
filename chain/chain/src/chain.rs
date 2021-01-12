@@ -3352,6 +3352,7 @@ impl<'a> ChainUpdate<'a> {
         }
     }
 
+    // TODO Bowen why don't use BlockHeader here?
     fn update_final_head_from_block(&mut self, block: &Block) -> Result<Option<Tip>, Error> {
         let final_head = self.chain_store_update.final_head()?;
         let last_final_block_header =
@@ -3373,6 +3374,7 @@ impl<'a> ChainUpdate<'a> {
 
     /// Directly updates the head if we've just appended a new block to it or handle
     /// the situation where the block has higher height to have a fork
+    // TODO Bowen why don't use BlockHeader here?
     fn update_head(&mut self, block: &Block) -> Result<Option<Tip>, Error> {
         // if we made a fork with higher height than the head (which should also be true
         // when extending the head), update it

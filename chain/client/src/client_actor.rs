@@ -465,8 +465,22 @@ impl Handler<NetworkClientMessages> for ClientActor {
 
                 NetworkClientResponses::NoResponse
             }
-            NetworkClientMessages::LightSpeedSyncResponse(peer_id, response) => {
-                self.client.light_speed_sync.on_response(peer_id, response);
+            NetworkClientMessages::EpochSyncResponse(peer_id, response) => {
+                // KRYA make sure we really sent EpochSyncRequest, ban otherwise
+                self.client.epoch_sync.on_response(peer_id, response);
+                NetworkClientResponses::NoResponse
+            }
+            NetworkClientMessages::EpochSyncFinalizationResponse(peer_id, response) => {
+                // KRYA make sure we really sent EpochSyncFinalizationRequest, ban otherwise
+                if self.client.epoch_sync.done {
+                    // We shouldn't go forward because Epoch Sync is finished
+                    return NetworkClientResponses::NoResponse;
+                }
+                self.client.epoch_sync.on_response_finalize(
+                    peer_id,
+                    response,
+                    &mut self.client.chain,
+                );
                 NetworkClientResponses::NoResponse
             }
             NetworkClientMessages::PartialEncodedChunkRequest(part_request_msg, route_back) => {
@@ -1129,10 +1143,13 @@ impl ClientActor {
             );
             return;
         }
+        if !self.sync_started {
+            println!("MOO Epoch Sync is started");
+        }
         self.sync_started = true;
 
         // Start main sync loop.
-        self.sync(ctx);
+        self.init_sync(ctx);
     }
 
     /// Select the block hash we are using to sync state. It will sync with the state before applying the
@@ -1209,6 +1226,46 @@ impl ClientActor {
         f(self, ctx);
 
         return now.checked_add_signed(OldDuration::from_std(duration).unwrap()).unwrap();
+    }
+
+    fn init_sync(&mut self, ctx: &mut Context<ClientActor>) {
+        #[cfg(feature = "delay_detector")]
+        let _d = DelayDetector::new("init sync".into());
+
+        macro_rules! run_later(() => ({
+             near_performance_metrics::actix::run_later(
+                 ctx,
+                 file!(),
+                 line!(),
+                 self.client.config.sync_step_period, move |act, ctx| {
+                     act.init_sync(ctx);
+
+                }
+            );
+            return;
+        }));
+
+        let now = Utc::now();
+
+        let epoch_sync_done = self.client.epoch_sync.run(
+            &mut self.client.sync_status,
+            &self.network_info.highest_height_peers,
+            now,
+        );
+        if !epoch_sync_done {
+            run_later!();
+        }
+
+        // Init Sync in completed, transition to regular Sync
+        near_performance_metrics::actix::run_later(
+            ctx,
+            file!(),
+            line!(),
+            self.client.config.sync_step_period,
+            move |act, ctx| {
+                act.sync(ctx);
+            },
+        );
     }
 
     /// Main syncing job responsible for syncing client with other peers.
