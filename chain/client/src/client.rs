@@ -780,8 +780,7 @@ impl Client {
             }
             Err(near_chunks::Error::ChainError(chain_error)) => {
                 match chain_error.kind() {
-                    near_chain::ErrorKind::BlockMissing(_)
-                    | near_chain::ErrorKind::DBNotFoundErr(_) => {
+                    near_chain::ErrorKind::DBNotFoundErr(_) => {
                         // We can't check if this chunk came from a valid chunk producer because
                         // we don't know `prev_block`, however the signature is checked when
                         // forwarded parts are later processed as partial encoded chunks, so we

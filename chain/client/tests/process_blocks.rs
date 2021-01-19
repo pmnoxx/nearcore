@@ -1168,11 +1168,11 @@ fn test_gc_with_epoch_length_common(epoch_length: NumBlocks) {
             let block_hash = *blocks[i as usize].hash();
             assert!(matches!(
                 env.clients[0].chain.get_block(&block_hash).unwrap_err().kind(),
-                ErrorKind::BlockMissing(missing_block_hash) if missing_block_hash == block_hash
+                ErrorKind::DBNotFoundErr(missing_block_hash) if missing_block_hash == "BLOCK: ".to_owned() + &block_hash.to_string()
             ));
             assert!(matches!(
                 env.clients[0].chain.get_block_by_height(i).unwrap_err().kind(),
-                ErrorKind::BlockMissing(missing_block_hash) if missing_block_hash == block_hash
+                ErrorKind::DBNotFoundErr(missing_block_hash) if missing_block_hash == "BLOCK: ".to_owned() + &block_hash.to_string()
             ));
             assert!(env.clients[0]
                 .chain

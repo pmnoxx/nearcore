@@ -2055,9 +2055,10 @@ impl<'a> ChainStoreUpdate<'a> {
             }
 
             let header_hashes = self.get_all_header_hashes_by_height(height)?;
-            for header_hash in header_hashes {
-                // 3. Delete chunk_hash-indexed data
-                self.gc_col(ColBlockHeader, &header_hash.into());
+            for _header_hash in header_hashes {
+                // 3. Delete header_hash-indexed data
+                // KRYA enable Headers GC
+                //self.gc_col(ColBlockHeader, &header_hash.into());
             }
 
             // 4. Delete chunks_tail-related data
@@ -2198,7 +2199,7 @@ impl<'a> ChainStoreUpdate<'a> {
             }
             GCMode::Canonical(_) => {
                 // 6. Canonical Chain only clearing
-                // Delete chunks and chunk-indexed data, and block headers
+                // Delete chunks, chunk-indexed data and block headers
                 let mut min_chunk_height = self.tail()?;
                 for chunk_header in block.chunks().iter() {
                     if min_chunk_height > chunk_header.height_created() {

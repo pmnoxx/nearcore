@@ -8,7 +8,6 @@ use log::error;
 use near_primitives::block::BlockValidityError;
 use near_primitives::challenge::{ChunkProofs, ChunkState};
 use near_primitives::errors::{EpochError, StorageError};
-use near_primitives::hash::CryptoHash;
 use near_primitives::serialize::to_base;
 use near_primitives::sharding::{ChunkHash, ShardChunkHeader};
 use near_primitives::types::{BlockHeight, ShardId};
@@ -26,9 +25,6 @@ pub enum ErrorKind {
     /// Orphan block.
     #[fail(display = "Orphan")]
     Orphan,
-    /// Block is not available (e.g. garbage collected)
-    #[fail(display = "Block Missing (unavailable on the node): {}", _0)]
-    BlockMissing(CryptoHash),
     /// Chunk is missing.
     #[fail(display = "Chunk Missing (unavailable on the node): {:?}", _0)]
     ChunkMissing(ChunkHash),
@@ -221,7 +217,6 @@ impl Error {
         match self.kind() {
             ErrorKind::Unfit(_)
             | ErrorKind::Orphan
-            | ErrorKind::BlockMissing(_)
             | ErrorKind::ChunkMissing(_)
             | ErrorKind::ChunksMissing(_)
             | ErrorKind::InvalidChunkHeight
