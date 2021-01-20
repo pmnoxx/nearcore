@@ -764,26 +764,32 @@ impl Chain {
     where
         F: Copy + FnMut(ChallengeBody) -> (),
     {
+        println!("HERE 1");
         // Sort headers by heights if they are out of order.
         headers.sort_by(|left, right| left.height().cmp(&right.height()));
 
+        println!("HERE 2");
         if let Some(header) = headers.first() {
             debug!(target: "chain", "Sync block headers: {} headers from {} at {}", headers.len(), header.hash(), header.height());
         } else {
             return Ok(());
         };
+        println!("HERE 3");
 
         let all_known = if let Some(last_header) = headers.last() {
             self.store.get_block_header(&last_header.hash()).is_ok()
         } else {
             false
         };
+        println!("HERE 4");
 
         if !all_known {
             // Validate header and then add to the chain.
             for header in headers.iter() {
+                println!("HERE 5");
                 let mut chain_update = self.chain_update();
 
+                println!("HERE 5a");
                 match chain_update.check_header_known(header) {
                     Ok(_) => {}
                     Err(e) => match e.kind() {
@@ -792,24 +798,33 @@ impl Chain {
                     },
                 }
 
-                chain_update.validate_header(header, &Provenance::SYNC, on_challenge)?;
+                println!("HERE 5b");
+                // KRYA enable ebanle
+                //chain_update.validate_header(header, &Provenance::SYNC, on_challenge)?;
+                println!("HERE 5c");
                 chain_update.chain_store_update.save_block_header(header.clone())?;
+                println!("HERE 5d");
                 chain_update.commit()?;
+                println!("HERE 5e");
 
                 // Add validator proposals for given header.
+                println!("HERE 6");
                 self.runtime_adapter.add_validator_proposals(BlockHeaderInfo::new(
                     &header,
                     self.store.get_block_height(&header.last_final_block())?,
                 ))?;
+                println!("HERE 7");
             }
         }
 
+        println!("HERE 8");
         let mut chain_update = self.chain_update();
 
         if let Some(header) = headers.last() {
             // Update header_head if it's the new tip
             chain_update.update_header_head_if_not_challenged(header)?;
         }
+        println!("HERE 9");
 
         chain_update.commit()
     }

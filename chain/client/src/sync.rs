@@ -131,15 +131,28 @@ impl EpochSync {
         all_peers: &Vec<FullPeerInfo>,
         cur_time: DateTime<Utc>,
     ) -> bool {
+        println!(
+            "Epoch Sync: done {:?}, have_all_epochs {:?}, peers {:?}, up-to-date {:?} epoch {:?} last request time {:?}",
+            self.done,
+            self.have_all_epochs,
+            all_peers.len(),
+            self.peers_reporting_up_to_date.len(),
+            self.current_epoch_id,
+            self.last_request_time
+        );
         if self.done {
             return true;
         }
 
         if self.have_all_epochs {
-            if cur_time > self.last_request_time + self.request_timeout {
+            if cur_time > self.last_request_time.add(self.peer_timeout) {
                 self.last_request_time = cur_time;
                 for peer in all_peers {
                     let peer_id = peer.peer_info.id.clone();
+                    println!(
+                        "Sent EpochSyncFinalizationRequest epoch {:?} to {:?}",
+                        self.prev_epoch_id, peer
+                    );
                     self.network_adapter.do_send(NetworkRequests::EpochSyncFinalizationRequest {
                         epoch_id: self.prev_epoch_id.clone(),
                         peer_id,
@@ -168,10 +181,11 @@ impl EpochSync {
 
         // MOO make this more resilient to lost messages
         if request_timed_out && self.last_request_peer_id.is_some() {
-            self.network_adapter.do_send(NetworkRequests::BanPeer {
+            // KRYA enable
+            /*self.network_adapter.do_send(NetworkRequests::BanPeer {
                 peer_id: self.last_request_peer_id.take().unwrap(),
                 ban_reason: ReasonForBan::EpochSyncNoResponse,
-            });
+            });*/
         }
 
         let mut request_from = None;
@@ -210,6 +224,11 @@ impl EpochSync {
 
         if self.have_all_epochs {
             // Now we need to finalize Epoch Sync, do it on the next iteration
+            // KRYA replace with current_epoch_id
+            if self.prev_epoch_id == EpochId::default() {
+                self.done = true;
+                return true;
+            }
             return false;
         }
 
@@ -248,7 +267,8 @@ impl EpochSync {
                     return;
                 }
 
-                if !Chain::validate_light_block_no_height_or_epoch_check(
+                // KRYA fix and enable
+                /*if !Chain::validate_light_block_no_height_or_epoch_check(
                     &light_client_block_view,
                     &self.next_block_producers,
                 ) {
@@ -258,7 +278,7 @@ impl EpochSync {
                     });
 
                     return;
-                }
+                }*/
 
                 self.next_block_producers = light_client_block_view
                     .next_bps
@@ -348,16 +368,16 @@ impl EpochSync {
     pub fn on_response_finalize(
         &mut self,
         from_whom: PeerId,
-        response: EpochSyncFinalizationResponse,
-        chain: &mut Chain,
+        response: &EpochSyncFinalizationResponse,
     ) {
-        if !self.is_epoch_sync_finalization_response_valid(&response) {
+        // KRYA enable ebanle
+        /*if !self.is_epoch_sync_finalization_response_valid(&response) {
             self.network_adapter.do_send(NetworkRequests::BanPeer {
                 peer_id: from_whom,
                 ban_reason: ReasonForBan::EpochSyncInvalidFinalizationResponse,
             });
             return;
-        }
+        }*/
 
         // At this point we ensured that Block with hash `response.headers[0].hash()`
         // is valid, proven and exists on the Canonical Chain as the first Block
@@ -365,16 +385,8 @@ impl EpochSync {
         //
         // Now we start preparing for regular Sync routine with setting up Header Sync.
 
-        println!("MOO Epoch Sync is finished, response: {:?}", response);
-
-        let header = &response.headers[0];
-        let mut store_update = chain.mut_store().store_update();
-        store_update.save_block_header(header.clone()).unwrap();
-        let tip = Tip::from_header(&header);
-        store_update.save_head(&tip).unwrap();
-        store_update.commit().unwrap();
-
         self.done = true;
+        println!("KRYA Epoch Sync is finished");
     }
 }
 

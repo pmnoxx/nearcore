@@ -795,7 +795,9 @@ impl PeerMessage {
             PeerMessage::Block(_)
             | PeerMessage::BlockHeaders(_)
             | PeerMessage::Transaction(_)
-            | PeerMessage::Challenge(_) => true,
+            | PeerMessage::Challenge(_)
+            | PeerMessage::EpochSyncResponse(_)
+            | PeerMessage::EpochSyncFinalizationResponse(_) => true,
             PeerMessage::Routed(r) => match r.body {
                 RoutedMessageBody::BlockApproval(_)
                 | RoutedMessageBody::ForwardTx(_)
@@ -828,6 +830,8 @@ impl PeerMessage {
             },
             PeerMessage::BlockHeadersRequest(_) => true,
             PeerMessage::BlockRequest(_) => true,
+            PeerMessage::EpochSyncRequest(_) => true,
+            PeerMessage::EpochSyncFinalizationRequest(_) => true,
             _ => false,
         }
     }

@@ -476,11 +476,10 @@ impl Handler<NetworkClientMessages> for ClientActor {
                     // We shouldn't go forward because Epoch Sync is finished
                     return NetworkClientResponses::NoResponse;
                 }
-                self.client.epoch_sync.on_response_finalize(
-                    peer_id,
-                    response,
-                    &mut self.client.chain,
-                );
+                self.client.epoch_sync.on_response_finalize(peer_id, &response);
+                println!("Epoch Sync Response: {:?}", response);
+                self.client.chain.sync_block_headers(response.headers, |_| {}).unwrap();
+                println!("KRYA KRYA");
                 NetworkClientResponses::NoResponse
             }
             NetworkClientMessages::PartialEncodedChunkRequest(part_request_msg, route_back) => {
@@ -1144,7 +1143,7 @@ impl ClientActor {
             return;
         }
         if !self.sync_started {
-            println!("MOO Epoch Sync is started");
+            println!("KRYA Epoch Sync is started");
         }
         self.sync_started = true;
 

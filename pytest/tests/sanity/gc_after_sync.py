@@ -67,7 +67,7 @@ start_time = time.time()
 node1_height = 0
 while True:
     assert time.time() - start_time < TIMEOUT, "Block sync timed out"
-    status = nodes[1].get_status()
+    status = nodes[1].get_status(timeout=15)
     print(status)
     node1_height = status['sync_info']['latest_block_height']
     if node1_height >= node0_height:

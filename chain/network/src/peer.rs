@@ -61,9 +61,11 @@ const MAX_PEER_MSG_PER_MIN: u64 = std::u64::MAX;
 const MAX_TXNS_PER_BLOCK_MESSAGE: usize = 1000;
 
 /// The time we wait for the response to a Epoch Sync request before retrying
-pub const EPOCH_SYNC_REQUEST_TIMEOUT_MS: u64 = 30_000;
+// KRYA set 30_000
+pub const EPOCH_SYNC_REQUEST_TIMEOUT_MS: u64 = 1_000;
 /// How frequently a Epoch Sync response can be sent to a particular peer
-pub const EPOCH_SYNC_PEER_TIMEOUT_MS: u64 = 60_000;
+// KRYA set 60_000
+pub const EPOCH_SYNC_PEER_TIMEOUT_MS: u64 = 1_000;
 
 /// Internal structure to keep a circular queue within a tracker with unique hashes.
 struct CircularUniqueQueue {
@@ -409,6 +411,7 @@ impl Peer {
                 NetworkViewClientMessages::BlockHeadersRequest(hashes)
             }
             PeerMessage::EpochSyncRequest(epoch_id) => {
+                println!("GAVGAV");
                 // The 2/3 coefficient to have a buffer to account for network delays
                 if Instant::now() - self.last_time_received_epoch_sync_request
                     < Duration::from_millis(EPOCH_SYNC_PEER_TIMEOUT_MS * 2 / 3)
@@ -419,6 +422,7 @@ impl Peer {
                 NetworkViewClientMessages::EpochSyncRequest { epoch_id }
             }
             PeerMessage::EpochSyncFinalizationRequest(epoch_id) => {
+                println!("MYAV");
                 NetworkViewClientMessages::EpochSyncFinalizationRequest { epoch_id }
             }
             peer_message => {
