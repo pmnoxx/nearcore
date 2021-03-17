@@ -109,6 +109,8 @@ pub enum ProtocolFeature {
     AltBn128,
     #[cfg(feature = "protocol_feature_restore_receipts_after_fix")]
     RestoreReceiptsAfterFix,
+    #[cfg(feature = "protocol_feature_routing_exchange_algorithm")]
+    RoutingExchangeAlgorithm,
 }
 
 /// Current latest stable version of the protocol.
@@ -139,6 +141,8 @@ impl ProtocolFeature {
             ProtocolFeature::CountRefundReceiptsInGasLimit => 46,
             ProtocolFeature::MathExtension => 46,
 
+            #[cfg(feature = "protocol_feature_routing_exchange_algorithm")]
+            ProtocolFeature::RoutingExchangeAlgorithm => 100,
             // Nightly features
             #[cfg(feature = "protocol_feature_evm")]
             ProtocolFeature::EVM => 103,
@@ -148,6 +152,7 @@ impl ProtocolFeature {
             ProtocolFeature::BlockHeaderV3 => 109,
             #[cfg(feature = "protocol_feature_restore_receipts_after_fix")]
             ProtocolFeature::RestoreReceiptsAfterFix => 112,
+            xxx
         }
     }
 }

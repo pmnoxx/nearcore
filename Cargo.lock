@@ -3299,6 +3299,8 @@ dependencies = [
  "near-performance-metrics",
  "near-primitives",
  "near-rpc-error-macro",
+ "near-runtime-utils",
+ "near-rust-allocator-proxy",
  "prometheus",
  "serde",
  "serde_json",
@@ -3377,8 +3379,10 @@ name = "near-network"
 version = "0.1.0"
 dependencies = [
  "actix",
+ "actix-web",
  "bencher",
  "borsh",
+ "bs58",
  "byteorder",
  "bytes",
  "bytesize",
