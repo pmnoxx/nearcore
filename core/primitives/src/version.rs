@@ -121,7 +121,7 @@ pub const PROTOCOL_VERSION: ProtocolVersion = 46;
 
 /// Current latest nightly version of the protocol.
 #[cfg(feature = "nightly_protocol")]
-pub const PROTOCOL_VERSION: ProtocolVersion = 114;
+pub const PROTOCOL_VERSION: ProtocolVersion = 115;
 
 impl ProtocolFeature {
     pub const fn protocol_version(self) -> ProtocolVersion {
@@ -152,7 +152,8 @@ impl ProtocolFeature {
             ProtocolFeature::BlockHeaderV3 => 109,
             #[cfg(feature = "protocol_feature_restore_receipts_after_fix")]
             ProtocolFeature::RestoreReceiptsAfterFix => 112,
-            xxx
+            #[cfg(feature = "protocol_feature_routing_exchange_algorithm")]
+            ProtocolFeature::RoutingExchangeAlgorithm => 115,
         }
     }
 }
