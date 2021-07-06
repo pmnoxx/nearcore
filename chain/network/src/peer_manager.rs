@@ -406,8 +406,6 @@ impl PeerManagerActor {
 
         self.process_edges(ctx, vec![new_edge.clone()]);
 
-        info!("PIOTR INCOMING PROTOCOL {} {:?}", protocol_version, addr2);
-
         let wait_for_sync = 1;
         checked_feature!(
             "protocol_feature_routing_exchange_algorithm",
@@ -420,13 +418,6 @@ impl PeerManagerActor {
                     line!(),
                     Duration::from_secs(wait_for_sync),
                     move |act, _ctx| {
-                        info!(target: "network", "PIOTR FEATURE ENABLED");
-                        // TODO(Piotr) remove this log
-                        info!(target: "network",
-                            "GOT NEW PROTOCOL VERSION STARTING NEW SYNC ALGORITHM edges.len: {} accounts.len: {}",
-                            act.routing_table.edges_info.len(),
-                            act.routing_table.get_announce_accounts_size(),
-                        );
                         if peer_type == PeerType::Inbound {
                             let mut rng = rand::thread_rng();
                             let seed: u64 = rng.gen();
@@ -1415,7 +1406,6 @@ impl Actor for PeerManagerActor {
                                 < max_num_peers + LIMIT_PENDING_PEERS;
                             if !accept_connection {
                                 if let Ok(addr) = conn.peer_addr() {
-                                    info!(target: "stats", "PIOTR GOT CONNECTION FROM {}", addr.ip());
                                     accept_connection |=
                                         peer_white_list.write().unwrap().contains(&addr.ip());
                                 }
@@ -1738,12 +1728,8 @@ impl Handler<NetworkRequests> for PeerManagerActor {
                 NetworkResponses::NoResponse
             }
             NetworkRequests::IbfMessage { peer_id, ibf_msg } => {
-                info!(
-                    "PIOTR IBF MESSAGE level: {} peer_id: {} seed: {}",
-                    ibf_msg.ibf_level, peer_id, ibf_msg.seed
-                );
+                info!(ibf_msg.ibf_level, peer_id, ibf_msg.seed);
                 if let Some(addr) = self.active_peers.get(&peer_id).map(|p| p.addr.clone()) {
-                    info!("PIOTR CASE 0 {}", peer_id);
                     self.verify_edges(ctx, peer_id.clone(), ibf_msg.edges);
                     if ibf_msg.request_all_edges {
                         let _ = addr.do_send(SendMessage {
@@ -1759,10 +1745,8 @@ impl Handler<NetworkRequests> for PeerManagerActor {
                                 done: true,
                             }),
                         });
-                        info!("PIOTR IBF CASE 1 {}", peer_id);
                     } else {
                         let ibf_set = self.routing_table.get_ibf_set(&peer_id).unwrap();
-                        info!("PIOTR IBF CASE 2 {}", peer_id);
 
                         // Edges to send to the other side
                         let (mut edges_for_peer, _) = self
@@ -1785,11 +1769,9 @@ impl Handler<NetworkRequests> for PeerManagerActor {
                                 );
 
                             edges_for_peer.extend_from_slice(known_edges.as_slice());
-                            info!("PIOTR IBF CASE 3 {}", peer_id);
 
                             // Prepare message
                             let ibf_msg = if unknown_edges_count == 0 {
-                                info!("PIOTR IBF CASE 3a {}", peer_id);
                                 RoutingSyncV2 {
                                     version: 0,
                                     known_edges: self.routing_table.get_edges_len(),
@@ -1803,7 +1785,6 @@ impl Handler<NetworkRequests> for PeerManagerActor {
                                 }
                             } else {
                                 if ibf_msg.ibf_level == IbfSet::<SimpleEdge>::MAX_IBF_LEVEL {
-                                    info!("PIOTR IBF CASE 3b {}", peer_id);
                                     RoutingSyncV2 {
                                         version: 0,
                                         known_edges: self.routing_table.get_edges_len(),
@@ -1816,7 +1797,6 @@ impl Handler<NetworkRequests> for PeerManagerActor {
                                         done: false,
                                     }
                                 } else {
-                                    info!("PIOTR IBF CASE 3c {}", peer_id);
                                     let ibf_vec = ibf_set
                                         .lock()
                                         .unwrap()
@@ -1835,14 +1815,11 @@ impl Handler<NetworkRequests> for PeerManagerActor {
                                 }
                             };
 
-                            info!("PIOTR IBF CASE 4 {}", peer_id);
                             let _ = addr.do_send(SendMessage {
                                 message: PeerMessage::RoutingTableSyncV2(ibf_msg),
                             });
                         }
                     }
-                } else {
-                    info!("PIOTR UNKNOWN PEER 4 {}", peer_id);
                 }
                 NetworkResponses::NoResponse
             }
@@ -1915,11 +1892,9 @@ impl Handler<InboundTcpConnect> for PeerManagerActor {
         #[cfg(feature = "delay_detector")]
         let _d = DelayDetector::new("inbound tcp connect".into());
         if let Ok(addr) = msg.stream.peer_addr() {
-            info!("PIOTR CONNECTING TO {}", addr);
             if self.is_inbound_allowed()
                 || self.peer_white_list.write().unwrap().contains(&addr.ip())
             {
-                info!("PIOTR CONNECTING2 TO {}", addr);
                 self.try_connect_peer(ctx.address(), msg.stream, PeerType::Inbound, None, None);
             } else {
                 // TODO(1896): Gracefully drop inbound connection for other peer.

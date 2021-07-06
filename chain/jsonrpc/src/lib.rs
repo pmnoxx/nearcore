@@ -1219,8 +1219,6 @@ fn get_cors(cors_allowed_origins: &[String]) -> Cors {
 fn get_peer_list(
     handler: web::Data<JsonRpcHandler>,
 ) -> impl Future<Output = Result<HttpResponse, HttpError>> {
-    println!("PIOTR2 {}", get_tid());
-    info!(target: "network", "PIOTR2 {}", get_tid());
     let response = async move {
         let result = handler.peer_manager_addr.send(PeersRequest {}).await.unwrap();
         let v: std::result::Result<HttpResponse, _> = Ok(HttpResponse::Ok().json(&result));
@@ -1238,8 +1236,6 @@ fn accept_connection_from(
     query: web::Query<AcceptConnectionFromInfo>,
     handler: web::Data<JsonRpcHandler>,
 ) -> impl Future<Output = Result<HttpResponse, HttpError>> {
-    println!("PIOTR4 {} address: {}", get_tid(), query.address);
-    info!(target: "network", "PIOTR2 accept {} address: {}", get_tid(), query.address);
     if let Ok(address) = query.address.parse() {
         let result = async move {
             match handler
@@ -1269,7 +1265,6 @@ fn connect_to(
     query: web::Query<ConnectToInfo>,
     handler: web::Data<JsonRpcHandler>,
 ) -> impl Future<Output = Result<HttpResponse, HttpError>> {
-    println!("PIOTR ADDR {} {}", query.seed, query.address);
     let seed = query.seed.clone();
     let dec = bs58::decode(seed);
     //SecretKey::ED25519(secret_key) => bs58::encode(&secret_key.0[..]).into_string(),

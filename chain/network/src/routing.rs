@@ -393,13 +393,6 @@ impl RoutingTable {
 
         let (known, unknown_edges) = self.split_edges_for_peer(&peer_id, &edge_hashes);
 
-        info!(
-            "PIOTR unknown_edge_count: {} known: {} unknown: {}",
-            unknown_edges_count,
-            known.len(),
-            unknown_edges.len(),
-        );
-
         (known, unknown_edges, unknown_edges_count)
     }
 

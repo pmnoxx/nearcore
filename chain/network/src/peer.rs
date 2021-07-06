@@ -1014,7 +1014,6 @@ impl StreamHandler<Result<Vec<u8>, ReasonForBan>> for Peer {
             }
             //(_, PeerStatus::Ready, PeerMessage::RoutingTableSyncV2(ibf_message)) => {
             (_, state, PeerMessage::RoutingTableSyncV2(ibf_message)) => {
-                info!("PIOTR GOT MESSAGE WITH STATE {:?}", state);
                 self.peer_manager_addr.do_send(NetworkRequests::IbfMessage {
                     peer_id: self.peer_id().unwrap(),
                     ibf_msg: ibf_message,
